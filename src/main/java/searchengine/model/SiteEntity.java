@@ -11,7 +11,7 @@ import javax.persistence.*;
 @Getter
 public class SiteEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     @Enumerated(EnumType.STRING)

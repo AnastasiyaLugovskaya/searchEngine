@@ -13,7 +13,7 @@ import javax.persistence.*;
 @Getter
 public class PageEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     @ManyToOne (optional=false, cascade=CascadeType.MERGE)
