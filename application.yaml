@@ -15,9 +15,14 @@ spring:
     show-sql: true
 indexing-settings:
   sites:
-      - url: https://www.lenta.ru
-        name: Лента.ру
-      - url: https://www.skillbox.ru
-        name: Skillbox
-      - url: https://www.playback.ru
-        name: PlayBack.Ru
+      - url: https://ipfran.ru/
+        name: ИПФ РАН
+      - url: https://www.playback.ru/
+        name: PlayBack.ru
+      - url: https://dimonvideo.ru/
+        name: DimonVideo
+jsoup:
+  user-agent: SolasSearchBot
+  referrer: http://www.google.com
+  timeout-min: 50
+  timeout-max: 150

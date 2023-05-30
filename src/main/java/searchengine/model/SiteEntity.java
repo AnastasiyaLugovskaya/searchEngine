@@ -4,13 +4,12 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.*;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "site")
 @Setter
 @Getter
-public class Site {
+public class SiteEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int id;
@@ -31,6 +30,6 @@ public class Site {
     @Column(columnDefinition = "VARCHAR(255)", nullable = false, unique = true)
     private String name;
 
-    public Site() {
+    public SiteEntity() {
     }
 }
