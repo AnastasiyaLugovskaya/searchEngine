@@ -13,7 +13,6 @@ import searchengine.model.Status;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
 
-import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 
 @Service
@@ -52,7 +51,7 @@ public class IndexingServiceImp implements IndexingService {
         for (SiteEntity siteEntity : siteRepository.findAll()) {
             new Thread(() -> {
                 Parser pageParser = new Parser(
-                        siteEntity.getUrl(), siteRepository, pageRepository, htmlParser, jsoupConfig, sites);
+                        siteEntity.getId(), "/", siteRepository, pageRepository, htmlParser, jsoupConfig);
                 ForkJoinPool forkJoinPool = new ForkJoinPool();
                 forkJoinPool.invoke(pageParser);
                 if (isIndexingStopped) {

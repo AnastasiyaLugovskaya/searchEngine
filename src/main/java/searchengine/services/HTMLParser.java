@@ -19,12 +19,16 @@ public class HTMLParser {
     private final JsoupConfiguration jsoupConfig;
     private static final Random random = new Random();
 
-    public Set<String> getURLs(String content){
+    public Set<String> getURLs(String url) throws InterruptedException, IOException {
         Set<String> urlSet = new TreeSet<>();
-        Document doc = Jsoup.parse(content);
+        Thread.sleep(150);
+
+        Connection.Response response = getResponse(url);
+        Document doc = Jsoup.parse(getContent(response));
+
         Elements urls = doc.select("a[href]");
         urls.forEach(e -> {
-            String link = e.attr("abs:href");
+            String link = e.attr("href");
             if (link.startsWith("/") && !link.contains("#") && !link.contains(".pdf")) {
                 urlSet.add(link);
             }
@@ -39,6 +43,7 @@ public class HTMLParser {
                 .referrer(jsoupConfig.getReferrer())
                 .header("Accept-Language", "ru")
                 .ignoreHttpErrors(true)
+                .followRedirects(false)
 //                .sslSocketFactory(socketFactory())
                 //ToDo: там у чела здесь были эти сокеты, надо не забыть потом проверить что они нужны или нет
                 .execute();
@@ -47,7 +52,7 @@ public class HTMLParser {
     public String getContent(Connection.Response response) throws IOException {
         return response.parse().html();
     }
-    public int getStatusCode(Connection.Response response){
+    public int getStatusCode(Connection.Response response) throws IOException {
         return response.statusCode();
     }
     public String getTitle(String content){

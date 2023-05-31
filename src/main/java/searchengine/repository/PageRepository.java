@@ -14,12 +14,12 @@ public interface PageRepository extends JpaRepository<PageEntity, Integer> {
     PageEntity findById(int id);
     int countPagesBySiteEntity (SiteEntity siteEntity);
     boolean existsBySiteEntityIdAndPath(int siteEntityId, String path);
-    PageEntity findBySiteEntityAndPath(SiteEntity siteEntity, String path);
+    PageEntity findBySiteEntityIdAndPath(int siteEntityId, String path);
     @Transactional
     @Modifying
     default int saveAndUpdate(PageEntity pageEntity) {
         Optional<PageEntity> entityOpt =
-                Optional.ofNullable(findBySiteEntityAndPath(pageEntity.getSiteEntity(), pageEntity.getPath()));
+                Optional.ofNullable(findBySiteEntityIdAndPath(pageEntity.getSiteEntity().getId(), pageEntity.getPath()));
         if (entityOpt.isPresent()) {
             PageEntity updatablePage = entityOpt.get();
             if (updatablePage.getCode() == 200) {

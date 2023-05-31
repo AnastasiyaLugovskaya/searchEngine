@@ -15,11 +15,11 @@ spring:
     show-sql: true
 indexing-settings:
   sites:
-      - url: https://ipfran.ru/
+      - url: https://ipfran.ru
         name: ИПФ РАН
-      - url: https://www.playback.ru/
+      - url: https://www.playback.ru
         name: PlayBack.ru
-      - url: https://dimonvideo.ru/
+      - url: https://dimonvideo.ru
         name: DimonVideo
 jsoup:
   user-agent: SolasSearchBot
