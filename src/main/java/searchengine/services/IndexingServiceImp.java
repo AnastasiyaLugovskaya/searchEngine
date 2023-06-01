@@ -8,6 +8,7 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.indexing.IndexingResponse;
 import searchengine.dto.indexing.Parser;
+import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
 import searchengine.repository.PageRepository;
@@ -37,31 +38,10 @@ public class IndexingServiceImp implements IndexingService {
             response.setError("Индексация уже запущена");
             return response;
         }
-        pageRepository.deleteAllInBatch();
-        siteRepository.deleteAllInBatch();
-        for (Site s : sites.getSites()) {
-            SiteEntity entity = new SiteEntity();
-            entity.setName(s.getName());
-            entity.setUrl(s.getUrl().toLowerCase());
-            entity.setStatus(Status.INDEXING);
-            entity.setStatusTime(System.currentTimeMillis());
-
-            siteRepository.save(entity);
-        }
+        cleanDB();
+        addSitesToRepo(sites);
         for (SiteEntity siteEntity : siteRepository.findAll()) {
-            new Thread(() -> {
-                Parser pageParser = new Parser(
-                        siteEntity.getId(), "/", siteRepository, pageRepository, htmlParser, jsoupConfig);
-                ForkJoinPool forkJoinPool = new ForkJoinPool();
-                forkJoinPool.invoke(pageParser);
-                if (isIndexingStopped) {
-                    pageParser.cancel(true);
-                    pageParser.updateSiteInfo(siteEntity, Status.FAILED, "Индексация остановлена пользователем");
-                }
-                if (siteEntity.getStatus() != Status.FAILED && !isIndexingStopped) {
-                    pageParser.updateSiteInfo(siteEntity, Status.INDEXED, Parser.getLastErrors().get(siteEntity.getId()));
-                }
-            }).start();
+            indexOneSite(siteEntity, "/", siteRepository, pageRepository, htmlParser, jsoupConfig);
             isIndexingStarted = true;
         }
         response.setResult(isIndexingStarted);
@@ -83,21 +63,75 @@ public class IndexingServiceImp implements IndexingService {
         return response;
     }
 
-/*
-    private void indexAllSites(SitesList sites) {
-        for (Site site : sites.getSites()) {
-            Thread thread = new Thread(() -> indexOneSite(site));
-            thread.setName(site.getName());
-            thread.start();
+    @Override
+    public IndexingResponse indexPage(String url) throws Exception {
+        IndexingResponse response = new IndexingResponse();
+        url = url.toLowerCase();
+        Site siteToMatch = null;
+        for (Site site : sites.getSites()){
+            if (url.contains(site.getUrl())){
+                siteToMatch = site;
+            }
+        }
+        if (siteToMatch == null){
+            response.setResult(false);
+            response.setError("Данная страница находится за пределами сайтов, " +
+                    "указанных в конфигурационном файле");
+            return response;
+        }
+
+        String root = siteToMatch.getUrl();
+        String relativeUrl = (url.equals(root)) ? "/" : url.replace(root, "");
+        SiteEntity siteEntity = siteRepository.findByUrl(root);
+        if (siteEntity == null){
+            addOneSiteToRepo(siteToMatch);
+            siteEntity = siteRepository.findByUrl(root);
+        }
+        deletePage(siteEntity.getId(), relativeUrl);
+        indexOneSite(siteEntity, relativeUrl, siteRepository, pageRepository, htmlParser, jsoupConfig);
+
+        response.setResult(true);
+        response.setError("");
+        return response;
+    }
+    public void cleanDB(){
+        pageRepository.deleteAllInBatch();
+        siteRepository.deleteAllInBatch();
+    }
+    private void indexOneSite(SiteEntity siteEntity, String url, SiteRepository siteRepository, PageRepository pageRepository,
+                                HTMLParser htmlParser, JsoupConfiguration jsoupConfig) {
+        new Thread(() -> {
+                    Parser pageParser = new Parser(
+                            siteEntity.getId(), url, siteRepository, pageRepository, htmlParser, jsoupConfig);
+                    ForkJoinPool forkJoinPool = new ForkJoinPool();
+                    forkJoinPool.invoke(pageParser);
+                    if (isIndexingStopped) {
+                        pageParser.cancel(true);
+                        pageParser.updateSiteInfo(siteEntity, Status.FAILED, "Индексация остановлена пользователем");
+                    }
+                    if (siteEntity.getStatus() != Status.FAILED && !isIndexingStopped) {
+                        pageParser.updateSiteInfo(siteEntity, Status.INDEXED, Parser.getLastErrors().get(siteEntity.getId()));
+                    }
+                }).start();
+    }
+    private void addSitesToRepo(SitesList sites){
+        for (Site s : sites.getSites()) {
+            addOneSiteToRepo(s);
         }
     }
+    private void addOneSiteToRepo(Site s){
+        SiteEntity entity = new SiteEntity();
+        entity.setName(s.getName());
+        entity.setUrl(s.getUrl().toLowerCase());
+        entity.setStatus(Status.INDEXING);
+        entity.setStatusTime(System.currentTimeMillis());
 
-    private void indexOneSite(Site site) {
-
+        siteRepository.save(entity);
     }
-
-    private boolean isIndexing(String name, Status status) {
-        return siteRepository.existsByNameAndStatus(name, status);
+    private void deletePage(int siteEntityId, String path) throws Exception {
+        PageEntity page = pageRepository.findBySiteEntityIdAndPath(siteEntityId, path);
+        if (page != null){
+            pageRepository.delete(page);
+        }
     }
-*/
 }

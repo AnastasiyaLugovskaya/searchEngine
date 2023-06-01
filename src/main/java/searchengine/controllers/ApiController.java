@@ -2,10 +2,7 @@ package searchengine.controllers;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import searchengine.dto.indexing.IndexingResponse;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.IndexingService;
@@ -36,5 +33,10 @@ public class ApiController {
     @ResponseStatus(HttpStatus.OK)
     public IndexingResponse stopIndexing(){
         return indexingService.stopIndexing();
+    }
+    @PostMapping("/indexPage")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public IndexingResponse indexPage(@RequestParam(name="url") String url) throws Exception {
+        return indexingService.indexPage(url);
     }
 }
