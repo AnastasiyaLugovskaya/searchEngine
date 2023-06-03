@@ -11,6 +11,8 @@ import searchengine.dto.indexing.Parser;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
+import searchengine.repository.IndexRepository;
+import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
 
@@ -25,6 +27,10 @@ public class IndexingServiceImp implements IndexingService {
     private final SiteRepository siteRepository;
     @Autowired
     private final PageRepository pageRepository;
+    @Autowired
+    private final LemmaRepository lemmaRepository;
+    @Autowired
+    private final IndexRepository indexRepository;
     private final JsoupConfiguration jsoupConfig;
     private final HTMLParser htmlParser;
     public static volatile boolean isIndexingStopped = false;
@@ -88,13 +94,21 @@ public class IndexingServiceImp implements IndexingService {
             siteEntity = siteRepository.findByUrl(root);
         }
         deletePage(siteEntity.getId(), relativeUrl);
-        indexOneSite(siteEntity, relativeUrl, siteRepository, pageRepository, htmlParser, jsoupConfig);
+        Parser parser = new Parser(siteEntity.getId(), relativeUrl,siteRepository,pageRepository,
+                lemmaRepository, indexRepository, htmlParser, jsoupConfig);
+        parser.savePage(siteEntity, relativeUrl);
+        PageEntity page = pageRepository.findBySiteEntityIdAndPath(siteEntity.getId(), relativeUrl);
+
+        LemmaParser lemmaParser = new LemmaParser(siteRepository, pageRepository, lemmaRepository, indexRepository, siteEntity);
+        lemmaParser.parseOnePage(page);
 
         response.setResult(true);
         response.setError("");
         return response;
     }
     public void cleanDB(){
+        indexRepository.deleteAllInBatch();
+        lemmaRepository.deleteAllInBatch();
         pageRepository.deleteAllInBatch();
         siteRepository.deleteAllInBatch();
     }
@@ -102,7 +116,8 @@ public class IndexingServiceImp implements IndexingService {
                                 HTMLParser htmlParser, JsoupConfiguration jsoupConfig) {
         new Thread(() -> {
                     Parser pageParser = new Parser(
-                            siteEntity.getId(), url, siteRepository, pageRepository, htmlParser, jsoupConfig);
+                            siteEntity.getId(), url, siteRepository, pageRepository, lemmaRepository,
+                            indexRepository, htmlParser, jsoupConfig);
                     ForkJoinPool forkJoinPool = new ForkJoinPool();
                     forkJoinPool.invoke(pageParser);
                     if (isIndexingStopped) {
@@ -131,6 +146,7 @@ public class IndexingServiceImp implements IndexingService {
     private void deletePage(int siteEntityId, String path) throws Exception {
         PageEntity page = pageRepository.findBySiteEntityIdAndPath(siteEntityId, path);
         if (page != null){
+            indexRepository.deleteByPageEntity(page);
             pageRepository.delete(page);
         }
     }

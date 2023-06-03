@@ -8,9 +8,12 @@ import searchengine.config.JsoupConfiguration;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
+import searchengine.repository.IndexRepository;
+import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
 import searchengine.services.HTMLParser;
+import searchengine.services.LemmaParser;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,6 +33,10 @@ public class Parser extends RecursiveAction {
     private final SiteRepository siteRepository;
     @Autowired
     private final PageRepository pageRepository;
+    @Autowired
+    private final LemmaRepository lemmaRepository;
+    @Autowired
+    private final IndexRepository indexRepository;
     private final HTMLParser htmlParser;
     private final JsoupConfiguration jsoupConfig;
     @Getter
@@ -49,10 +56,15 @@ public class Parser extends RecursiveAction {
             for (String path : pageSet) {
                 if (isNotVisited(siteId, path) && isNotFailed(siteId)) {
                     boolean isSaved = savePage(site, path);
+                    PageEntity pageEntity = pageRepository.findBySiteEntityIdAndPath(siteId, path);
+                    LemmaParser lemmaParser = new LemmaParser(
+                            siteRepository, pageRepository, lemmaRepository, indexRepository, site);
+                    lemmaParser.parseOnePage(pageEntity);
                     updateSiteInfo(site, Status.INDEXING, lastErrors.get(siteId));
                     if (isSaved) {
                         Parser parser =
-                                new Parser(siteId, path, siteRepository, pageRepository, htmlParser, jsoupConfig);
+                                new Parser(siteId, path, siteRepository, pageRepository, lemmaRepository, indexRepository,
+                                        htmlParser, jsoupConfig);
                         subTask.add(parser);
                     }
                 }
@@ -82,7 +94,7 @@ public class Parser extends RecursiveAction {
         }
     }
 
-    private boolean savePage(SiteEntity site, String path) throws IOException, InterruptedException {
+    public boolean savePage(SiteEntity site, String path) throws IOException, InterruptedException {
         if (isIndexingStopped){
             return false;
         }

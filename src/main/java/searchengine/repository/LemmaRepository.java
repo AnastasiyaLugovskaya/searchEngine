@@ -6,5 +6,5 @@ import searchengine.model.LemmaEntity;
 
 @Repository
 public interface LemmaRepository extends JpaRepository<LemmaEntity, Integer> {
-
+    LemmaEntity findByLemmaAndSiteEntityId(String lemma, int siteEntityId);
 }

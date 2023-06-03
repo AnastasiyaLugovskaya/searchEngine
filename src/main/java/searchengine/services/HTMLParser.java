@@ -44,8 +44,6 @@ public class HTMLParser {
                 .header("Accept-Language", "ru")
                 .ignoreHttpErrors(true)
                 .followRedirects(false)
-//                .sslSocketFactory(socketFactory())
-                //ToDo: там у чела здесь были эти сокеты, надо не забыть потом проверить что они нужны или нет
                 .execute();
         return response;
     }
