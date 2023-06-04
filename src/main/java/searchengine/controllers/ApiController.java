@@ -21,8 +21,9 @@ public class ApiController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<StatisticsResponse> statistics() {
-        return ResponseEntity.ok(statisticsService.getStatistics());
+    @ResponseStatus(HttpStatus.OK)
+    public StatisticsResponse statistics() {
+        return statisticsService.getStatistics();
     }
     @GetMapping("/startIndexing")
     @ResponseStatus(HttpStatus.ACCEPTED)

@@ -52,8 +52,8 @@ public class LemmaParser {
                 indexEntityList.add(indexEntity);
             });
             indexRepository.saveAll(indexEntityList);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (RuntimeException | IOException e) {
+            throw new RuntimeException();
         }
     }
     public LemmaEntity updateLemmaInfo(String lemma){

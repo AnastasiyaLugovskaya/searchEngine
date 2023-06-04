@@ -57,9 +57,14 @@ public class Parser extends RecursiveAction {
                 if (isNotVisited(siteId, path) && isNotFailed(siteId)) {
                     boolean isSaved = savePage(site, path);
                     PageEntity pageEntity = pageRepository.findBySiteEntityIdAndPath(siteId, path);
+                    if (pageEntity == null){
+                        continue;
+                    }
                     LemmaParser lemmaParser = new LemmaParser(
                             siteRepository, pageRepository, lemmaRepository, indexRepository, site);
-                    lemmaParser.parseOnePage(pageEntity);
+                    if (pageEntity.getCode() < 400 ) {
+                        lemmaParser.parseOnePage(pageEntity);
+                    }
                     updateSiteInfo(site, Status.INDEXING, lastErrors.get(siteId));
                     if (isSaved) {
                         Parser parser =
@@ -101,6 +106,8 @@ public class Parser extends RecursiveAction {
         Connection.Response response = htmlParser.getResponse(site.getUrl());
         String pageContent = htmlParser.getContent(response);
         int statusCode = htmlParser.getStatusCode(response);
+
+        pageRepository.flush();
         synchronized (pageRepository) {
             PageEntity page = pageRepository.findBySiteEntityIdAndPath(siteId, path);
             try {

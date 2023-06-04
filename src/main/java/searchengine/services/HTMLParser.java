@@ -21,18 +21,21 @@ public class HTMLParser {
 
     public Set<String> getURLs(String url) throws InterruptedException, IOException {
         Set<String> urlSet = new TreeSet<>();
-        Thread.sleep(150);
+        Thread.sleep(500);
 
         Connection.Response response = getResponse(url);
-        Document doc = Jsoup.parse(getContent(response));
+        if (response.contentType() != null && ((response.contentType().contains("text/html")
+                || response.contentType().contains("xml"))))  {
+            Document doc = Jsoup.parse(getContent(response));
 
-        Elements urls = doc.select("a[href]");
-        urls.forEach(e -> {
-            String link = e.attr("href");
-            if (link.startsWith("/") && !link.contains("#") && !link.contains(".pdf")) {
-                urlSet.add(link);
-            }
-        });
+            Elements urls = doc.select("a[href]");
+            urls.forEach(e -> {
+                String link = e.attr("href");
+                if (link.startsWith("/") && !link.contains("#") && !link.contains(".pdf")) {
+                    urlSet.add(link);
+                }
+            });
+        }
         return urlSet;
     }
     public Connection.Response getResponse(String url) throws InterruptedException, IOException {
@@ -52,9 +55,6 @@ public class HTMLParser {
     }
     public int getStatusCode(Connection.Response response) throws IOException {
         return response.statusCode();
-    }
-    public String getTitle(String content){
-        return Jsoup.parse(content).title();
     }
 }
 

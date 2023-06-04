@@ -89,11 +89,13 @@ public class IndexingServiceImp implements IndexingService {
         String root = siteToMatch.getUrl();
         String relativeUrl = (url.equals(root)) ? "/" : url.replace(root, "");
         SiteEntity siteEntity = siteRepository.findByUrl(root);
+
         if (siteEntity == null){
             addOneSiteToRepo(siteToMatch);
             siteEntity = siteRepository.findByUrl(root);
         }
         deletePage(siteEntity.getId(), relativeUrl);
+
         Parser parser = new Parser(siteEntity.getId(), relativeUrl,siteRepository,pageRepository,
                 lemmaRepository, indexRepository, htmlParser, jsoupConfig);
         parser.savePage(siteEntity, relativeUrl);
@@ -102,6 +104,7 @@ public class IndexingServiceImp implements IndexingService {
         LemmaParser lemmaParser = new LemmaParser(siteRepository, pageRepository, lemmaRepository, indexRepository, siteEntity);
         lemmaParser.parseOnePage(page);
 
+        setStatusAfterIndexing(parser, siteEntity);
         response.setResult(true);
         response.setError("");
         return response;
@@ -120,13 +123,7 @@ public class IndexingServiceImp implements IndexingService {
                             indexRepository, htmlParser, jsoupConfig);
                     ForkJoinPool forkJoinPool = new ForkJoinPool();
                     forkJoinPool.invoke(pageParser);
-                    if (isIndexingStopped) {
-                        pageParser.cancel(true);
-                        pageParser.updateSiteInfo(siteEntity, Status.FAILED, "Индексация остановлена пользователем");
-                    }
-                    if (siteEntity.getStatus() != Status.FAILED && !isIndexingStopped) {
-                        pageParser.updateSiteInfo(siteEntity, Status.INDEXED, Parser.getLastErrors().get(siteEntity.getId()));
-                    }
+                    setStatusAfterIndexing(pageParser, siteEntity);
                 }).start();
     }
     private void addSitesToRepo(SitesList sites){
@@ -143,11 +140,20 @@ public class IndexingServiceImp implements IndexingService {
 
         siteRepository.save(entity);
     }
-    private void deletePage(int siteEntityId, String path) throws Exception {
+    private void deletePage(int siteEntityId, String path) {
         PageEntity page = pageRepository.findBySiteEntityIdAndPath(siteEntityId, path);
         if (page != null){
             indexRepository.deleteByPageEntity(page);
             pageRepository.delete(page);
+        }
+    }
+    private void setStatusAfterIndexing(Parser pageParser, SiteEntity siteEntity){
+        if (isIndexingStopped) {
+            pageParser.cancel(true);
+            pageParser.updateSiteInfo(siteEntity, Status.FAILED, "Индексация остановлена пользователем");
+        }
+        if (siteEntity.getStatus() != Status.FAILED && !isIndexingStopped) {
+            pageParser.updateSiteInfo(siteEntity, Status.INDEXED, Parser.getLastErrors().get(siteEntity.getId()));
         }
     }
 }

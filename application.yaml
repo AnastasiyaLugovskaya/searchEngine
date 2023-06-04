@@ -15,10 +15,10 @@ spring:
     show-sql: true
 indexing-settings:
   sites:
-      - url: https://ipfran.ru
-        name: ИПФ РАН
-      - url: https://www.playback.ru
-        name: PlayBack.ru
+      - url: https://volochek.life
+        name: Вышний Волочек
+      - url: https://www.lutherancathedral.ru
+        name: КАФЕДРАЛЬНЫЙ СОБОР СВЯТЫХ ПЕТРА И ПАВЛА
       - url: https://dimonvideo.ru
         name: DimonVideo
 jsoup:
