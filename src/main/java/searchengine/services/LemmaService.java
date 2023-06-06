@@ -2,12 +2,11 @@ package searchengine.services;
 
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
+import org.jsoup.nodes.Document;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class LemmaService {
     private final static String REGEX_TO_SPLIT = "[^а-яё\\s]";
@@ -79,6 +78,14 @@ public class LemmaService {
         }
         return lemmas;
     }
+    public String getOneLemma(String word){
+        String correctWord = word.toLowerCase(Locale.ROOT).replaceAll("[^а-яё\\s]", "").trim();
+        if (correctWord.length() > 0) {
+            return luceneMorphology.getNormalForms(correctWord).get(0);
+        } else {
+            return null;
+        }
+    }
     private boolean anyWordBaseBelongToParticle(List<String> wordBaseForms) {
         return wordBaseForms.stream().anyMatch(this::hasParticleProperty);
     }
@@ -90,7 +97,14 @@ public class LemmaService {
         }
         return false;
     }
-    private String removeTagsFromText(String content){
+    public String removeTagsFromText(String content){
         return content.replaceAll(REGEX_TO_REMOVE_TAGS, " ").replaceAll("\\s+", " ").trim();
+    }
+    public static TreeMap<String, Integer> sortLemmas(Map<String, Integer> lemmas){
+        TreeMap<String, Integer> sortedMap = lemmas.entrySet()
+                .stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, TreeMap::new));
+        return sortedMap;
     }
 }

@@ -56,5 +56,9 @@ public class HTMLParser {
     public int getStatusCode(Connection.Response response) throws IOException {
         return response.statusCode();
     }
+    public String getTitle(String content) {
+        Document document = Jsoup.parse(content);
+        return document.title();
+    }
 }
 

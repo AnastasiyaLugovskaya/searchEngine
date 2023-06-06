@@ -126,12 +126,12 @@ public class IndexingServiceImp implements IndexingService {
                     setStatusAfterIndexing(pageParser, siteEntity);
                 }).start();
     }
-    private void addSitesToRepo(SitesList sites){
+    public void addSitesToRepo(SitesList sites){
         for (Site s : sites.getSites()) {
             addOneSiteToRepo(s);
         }
     }
-    private void addOneSiteToRepo(Site s){
+    public void addOneSiteToRepo(Site s){
         SiteEntity entity = new SiteEntity();
         entity.setName(s.getName());
         entity.setUrl(s.getUrl().toLowerCase());
