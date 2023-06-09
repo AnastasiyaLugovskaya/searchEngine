@@ -51,7 +51,7 @@ public class HTMLParser {
         return response;
     }
     public String getContent(Connection.Response response) throws IOException {
-        return response.parse().html();
+        return response.body();
     }
     public int getStatusCode(Connection.Response response) throws IOException {
         return response.statusCode();

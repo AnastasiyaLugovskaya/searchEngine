@@ -7,30 +7,20 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
-import searchengine.repository.PageRepository;
-import searchengine.repository.SiteRepository;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class LemmaParser {
-    private final SiteRepository siteRepository;
-    private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
-    private SiteEntity siteEntity;
 
-    public LemmaParser(SiteRepository siteRepository, PageRepository pageRepository,
-                       LemmaRepository lemmaRepository, IndexRepository indexRepository,
-                       SiteEntity siteEntity) {
-        this.siteRepository = siteRepository;
-        this.pageRepository = pageRepository;
+    public LemmaParser(LemmaRepository lemmaRepository, IndexRepository indexRepository) {
         this.lemmaRepository = lemmaRepository;
         this.indexRepository = indexRepository;
-        this.siteEntity = siteEntity;
     }
     @Transactional
     public void parseOnePage(PageEntity pageEntity){
@@ -39,11 +29,15 @@ public class LemmaParser {
 
             Map<String, Integer> lemmasFromPage = lemmaService.getLemmas(pageEntity.getContent());
             Map<LemmaEntity, Integer> lemmaEntityMap = new HashMap<>();
-            List<IndexEntity> indexEntityList = new ArrayList<>();
-
-            lemmasFromPage.forEach((key, value) -> lemmaEntityMap.put(updateLemmaInfo(key), value));
-            lemmaRepository.saveAll(lemmaEntityMap.keySet());
-
+            Set<IndexEntity> indexEntityList = new HashSet<>();
+            synchronized (lemmaRepository) {
+                lemmasFromPage.forEach((key, value) -> lemmaEntityMap.put(
+                        updateLemmaInfo(key, pageEntity.getSiteEntity()), value));
+                if (!lemmaEntityMap.isEmpty()) {
+                    lemmaRepository.flush();
+                    lemmaRepository.saveAll(lemmaEntityMap.keySet());
+                }
+            }
             lemmaEntityMap.forEach((key, value) -> {
                 IndexEntity indexEntity = new IndexEntity();
                 indexEntity.setLemmaEntity(key);
@@ -51,12 +45,13 @@ public class LemmaParser {
                 indexEntity.setRank(value);
                 indexEntityList.add(indexEntity);
             });
+            indexRepository.flush();
             indexRepository.saveAll(indexEntityList);
         } catch (RuntimeException | IOException e) {
-            throw new RuntimeException();
+            throw new RuntimeException("Ошибка при парсинге страницы");
         }
     }
-    public LemmaEntity updateLemmaInfo(String lemma){
+    public LemmaEntity updateLemmaInfo(String lemma, SiteEntity siteEntity){
         LemmaEntity lemmaEntity = lemmaRepository.findByLemmaAndSiteEntityId(lemma, siteEntity.getId());
         if (lemmaEntity == null){
             lemmaEntity = new LemmaEntity();
@@ -67,9 +62,5 @@ public class LemmaParser {
             lemmaEntity.setFrequency(lemmaEntity.getFrequency() + 1);
         }
         return lemmaEntity;
-    }
-
-    public void setSiteEntity(SiteEntity siteEntity) {
-        this.siteEntity = siteEntity;
     }
 }

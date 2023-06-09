@@ -13,10 +13,14 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
+import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -27,6 +31,7 @@ public class SearchServiceImp implements SearchService {
     private final IndexRepository indexRepository;
     private final SiteRepository siteRepository;
     private final LemmaRepository lemmaRepository;
+    private final PageRepository pageRepository;
     private final HTMLParser htmlParser;
 
     private LemmaService lemmaService;
@@ -41,7 +46,7 @@ public class SearchServiceImp implements SearchService {
             response.setResult(false);
             response.setError("Задан пустой поисковый запрос");
         }
-        if (siteRepository.findAll().size() == 0 ){
+        if (siteRepository.findAll().size() == 0) {
             indexingServiceImp.addSitesToRepo(sites);
         }
         List<SearchData> searchData = new ArrayList<>();
@@ -56,29 +61,56 @@ public class SearchServiceImp implements SearchService {
                 SiteEntity siteEntity = siteRepository.findByUrl(site);
                 searchData = getSearchData(siteEntity, lemmas);
             } else {
-                for (SiteEntity siteEntity : siteRepository.findAll()){
+                for (SiteEntity siteEntity : siteRepository.findAll()) {
                     searchData.addAll(getSearchData(siteEntity, lemmas));
                 }
             }
-        response.setResult(true);
-        response.setCount(searchData.size());
-        response.setData(getSubList(searchData, offset, limit));
-    } catch(
-    IOException e)
-
-    {
-        throw new NotFoundException("Указанная страница не найдена");
-    }
+            response.setResult(true);
+            response.setCount(searchData.size());
+            response.setData(getSubList(searchData, offset, limit));
+        } catch (
+                IOException e) {
+            throw new NotFoundException("Указанная страница не найдена");
+        }
         return response;
-}
+    }
+    private List<SearchData> getSearchData(SiteEntity siteEntity, Map<String, Integer> lemmas) throws IOException {
+        List<LemmaEntity> sortedLemmaList = getSortedLemmaList(siteEntity, lemmas);
+//        if (sortedLemmaList.size() == 0){
+//            throw new NotFoundException("Не обнаружено лемм для поиска");
+//        }
+        Set<PageEntity> pages = getPages(sortedLemmaList);
+        if (pages == null || pages.size() == 0) {
+            return Collections.emptyList();
+        }
+
+        Double maxRank = getMaxRank(pages, sortedLemmaList);
+        List<SearchData> searchData;
+        if (maxRank == null) {
+            searchData = List.of();
+        } else {
+            searchData = new ArrayList<>();
+            Map<PageEntity, Double> pageRank = getPageRank(pages, sortedLemmaList);
+            for (Map.Entry<PageEntity, Double> entry : pageRank.entrySet()) {
+                PageEntity page = entry.getKey();
+                Double rank = entry.getValue();
+                String content = lemmaService.removeTagsFromText(page.getContent());
+                SearchData data = new SearchData(siteEntity.getUrl(), siteEntity.getName(), page.getPath(),
+                        htmlParser.getTitle(page.getContent()),
+                        snippetCreator.createSnippet(content, lemmas.keySet()),
+                        (rank / maxRank));
+                searchData.add(data);
+            }
+            searchData.sort((a, b) -> Double.compare(b.relevance(), a.relevance()));
+        }
+        return searchData;
+    }
 
     private Double sumRank(PageEntity page, Set<LemmaEntity> lemmaEntitySet) {
-        Set<IndexEntity> indexEntities = indexRepository.findAllByPageEntityAndLemmaEntityIn(page, lemmaEntitySet);
-        double sum = 0.0;
-        for (IndexEntity indexEntity : indexEntities) {
-            sum += indexEntity.getRank();
-        }
-        return sum;
+        return indexRepository
+                .findAllByPageEntityAndLemmaEntityIn(page, lemmaEntitySet)
+                .stream().mapToDouble(IndexEntity::getRank)
+                .sum();
     }
 
     private Double getMaxRank(Set<PageEntity> pages, List<LemmaEntity> lemmaEntityList) {
@@ -101,11 +133,54 @@ public class SearchServiceImp implements SearchService {
     }
 
     @Cacheable("myCache")
+    /*private Set<PageEntity> getPages(List<LemmaEntity> lemmaEntityList) {
+        if (lemmaEntityList.isEmpty()) return Set.of();
+
+        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        List<CompletableFuture<Set<IndexEntity>>> futures = new ArrayList<>();
+
+        for (LemmaEntity lemmaEntity : lemmaEntityList) {
+            CompletableFuture<Set<IndexEntity>> future = CompletableFuture.supplyAsync(() -> {
+                Set<IndexEntity> set = indexRepository.findAllByLemmaEntity(lemmaEntity);
+                return (set != null) ? set : Collections.emptySet();
+            }, executorService);
+            futures.add(future);
+        }
+
+        CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
+
+        Set<PageEntity> pages = null;
+        try {
+            allFutures.join();
+            pages = futures.stream()
+                    .map(CompletableFuture::join)
+                    .flatMap(Set::stream)
+                    .map(IndexEntity::getPageEntity)
+                    .collect(Collectors.toSet());
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        } finally {
+            executorService.shutdown();
+        }
+
+        return pages;
+    }*/
     private Set<PageEntity> getPages(List<LemmaEntity> lemmaEntityList) {
         if (lemmaEntityList.isEmpty()) return Set.of();
-        Set<PageEntity> pages = indexRepository.findAllByLemmaEntity(lemmaEntityList.get(0));
+        Set<PageEntity> pages = indexRepository
+                .findAllByLemmaEntityId(lemmaEntityList.get(0).getId())
+                .stream()
+                .map(IndexEntity::getPageEntity)
+                .collect(Collectors.toSet());
+        if (pages.isEmpty()){
+            return Set.of();
+        }
         for (int i = 1; i < lemmaEntityList.size(); i++) {
-            pages = indexRepository.findAllByLemmaEntityAndPageEntityIn(lemmaEntityList.get(i), pages).stream()
+            Set<IndexEntity> set = indexRepository.findAllByLemmaEntityAndPageEntityIn(lemmaEntityList.get(i), pages);
+            if (set == null){
+                return pages;
+            }
+            pages = set.stream()
                     .map(IndexEntity::getPageEntity)
                     .collect(Collectors.toSet());
             if (pages.isEmpty()) {
@@ -127,33 +202,19 @@ public class SearchServiceImp implements SearchService {
         }
         return searchData.subList(fromIndex, toIndex);
     }
-
-    private List<SearchData> getSearchData(SiteEntity siteEntity, Map<String, Integer> lemmas) throws IOException {
-        TreeMap<String, Integer> sortedLemmas = lemmaService.sortLemmas(lemmas);
+    private List<LemmaEntity> getSortedLemmaList(SiteEntity siteEntity, Map<String, Integer> lemmas){
+        double threshold = pageRepository.count() / 3.0;
         List<LemmaEntity> lemmaEntityList = new ArrayList<>();
-        sortedLemmas.keySet().forEach(lemma -> {
-            lemmaEntityList.add(lemmaRepository.findByLemmaAndSiteEntityId(lemma, siteEntity.getId()));
-        });
-        Set<PageEntity> pages = getPages(lemmaEntityList);
-
-        Double maxRank = getMaxRank(pages, lemmaEntityList);
-        List<SearchData> searchData;
-        if (maxRank == null) {
-            searchData = List.of();
-        } else {
-            searchData = new ArrayList<>();
-            for (Map.Entry<PageEntity, Double> entry : getPageRank(pages, lemmaEntityList).entrySet()) {
-                PageEntity page = entry.getKey();
-                Double rank = entry.getValue();
-                String content = lemmaService.removeTagsFromText(page.getContent());
-                SearchData data = new SearchData(siteEntity.getUrl(), siteEntity.getName(), page.getPath(),
-                        htmlParser.getTitle(content),
-                        snippetCreator.createSnippet(content, lemmas.keySet()),
-                        (rank / maxRank));
-                searchData.add(data);
+        lemmas.keySet().forEach(lemma -> {
+            LemmaEntity lemmaEntity = lemmaRepository.findByLemmaAndSiteEntityId(lemma, siteEntity.getId());
+            if (lemmaEntity != null && lemmaEntity.getFrequency() < threshold) {
+                lemmaEntityList.add(lemmaEntity);
             }
-            searchData.sort((a, b) -> Double.compare(b.relevance(), a.relevance()));
-        }
-        return searchData;
+        });
+        lemmaEntityList.sort(Comparator
+                .comparingInt(LemmaEntity::getFrequency)
+//                .reversed()
+                .thenComparing(LemmaEntity::getLemma));
+        return lemmaEntityList;
     }
 }

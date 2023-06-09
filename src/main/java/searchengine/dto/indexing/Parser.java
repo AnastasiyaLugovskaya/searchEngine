@@ -60,8 +60,7 @@ public class Parser extends RecursiveAction {
                     if (pageEntity == null){
                         continue;
                     }
-                    LemmaParser lemmaParser = new LemmaParser(
-                            siteRepository, pageRepository, lemmaRepository, indexRepository, site);
+                    LemmaParser lemmaParser = new LemmaParser(lemmaRepository, indexRepository);
                     if (pageEntity.getCode() < 400 ) {
                         lemmaParser.parseOnePage(pageEntity);
                     }

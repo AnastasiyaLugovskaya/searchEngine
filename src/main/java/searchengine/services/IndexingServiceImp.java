@@ -101,7 +101,7 @@ public class IndexingServiceImp implements IndexingService {
         parser.savePage(siteEntity, relativeUrl);
         PageEntity page = pageRepository.findBySiteEntityIdAndPath(siteEntity.getId(), relativeUrl);
 
-        LemmaParser lemmaParser = new LemmaParser(siteRepository, pageRepository, lemmaRepository, indexRepository, siteEntity);
+        LemmaParser lemmaParser = new LemmaParser(lemmaRepository, indexRepository);
         lemmaParser.parseOnePage(page);
 
         setStatusAfterIndexing(parser, siteEntity);

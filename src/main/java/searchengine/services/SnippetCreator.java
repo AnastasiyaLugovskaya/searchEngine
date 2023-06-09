@@ -2,11 +2,9 @@ package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import searchengine.model.PageEntity;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -46,7 +44,7 @@ public class SnippetCreator {
                 if (builder.length() > MAX_SNIPPET_LENGTH) {
                     break;
                 }
-                builder.append(end < words.length ? "..." : "");
+                builder.append(end < words.length ? "...\n" : "");
             }
         }
         String snippet = builder.toString();

@@ -13,7 +13,7 @@ public class IndexEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "page_id", nullable = false)
     private PageEntity pageEntity;
     @ManyToOne(fetch = FetchType.LAZY)
