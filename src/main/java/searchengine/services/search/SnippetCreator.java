@@ -1,7 +1,8 @@
-package searchengine.services;
+package searchengine.services.search;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import searchengine.services.lemma.LemmaService;
 
 import java.io.IOException;
 import java.util.List;

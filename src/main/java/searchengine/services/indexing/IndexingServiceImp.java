@@ -1,8 +1,10 @@
-package searchengine.services;
+package searchengine.services.indexing;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.JsoupConfiguration;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -15,7 +17,10 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
+import searchengine.services.util.HTMLParser;
+import searchengine.services.lemma.LemmaParser;
 
+import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 
 @Service
@@ -72,6 +77,7 @@ public class IndexingServiceImp implements IndexingService {
     @Override
     public IndexingResponse indexPage(String url) throws Exception {
         IndexingResponse response = new IndexingResponse();
+        LemmaParser lemmaParser = new LemmaParser(lemmaRepository, indexRepository);
         url = url.toLowerCase();
         Site siteToMatch = null;
         for (Site site : sites.getSites()){
@@ -94,16 +100,15 @@ public class IndexingServiceImp implements IndexingService {
             addOneSiteToRepo(siteToMatch);
             siteEntity = siteRepository.findByUrl(root);
         }
-        deletePage(siteEntity.getId(), relativeUrl);
+        deletePage(siteEntity.getId(), relativeUrl, root);
 
         Parser parser = new Parser(siteEntity.getId(), relativeUrl,siteRepository,pageRepository,
                 lemmaRepository, indexRepository, htmlParser, jsoupConfig);
-        parser.savePage(siteEntity, relativeUrl);
-        PageEntity page = pageRepository.findBySiteEntityIdAndPath(siteEntity.getId(), relativeUrl);
-
-        LemmaParser lemmaParser = new LemmaParser(lemmaRepository, indexRepository);
-        lemmaParser.parseOnePage(page);
-
+        Optional<PageEntity> optionalPage = parser.savePage(siteEntity, relativeUrl);
+        if (optionalPage.isPresent()) {
+            PageEntity page = optionalPage.get();
+            lemmaParser.parseOnePage(page);
+        }
         setStatusAfterIndexing(parser, siteEntity);
         response.setResult(true);
         response.setError("");
@@ -118,7 +123,7 @@ public class IndexingServiceImp implements IndexingService {
     private void indexOneSite(SiteEntity siteEntity, String url, SiteRepository siteRepository, PageRepository pageRepository,
                                 HTMLParser htmlParser, JsoupConfiguration jsoupConfig) {
         new Thread(() -> {
-                    Parser pageParser = new Parser(
+            Parser pageParser = new Parser(
                             siteEntity.getId(), url, siteRepository, pageRepository, lemmaRepository,
                             indexRepository, htmlParser, jsoupConfig);
                     ForkJoinPool forkJoinPool = new ForkJoinPool();
@@ -140,10 +145,12 @@ public class IndexingServiceImp implements IndexingService {
 
         siteRepository.save(entity);
     }
-    private void deletePage(int siteEntityId, String path) {
-        PageEntity page = pageRepository.findBySiteEntityIdAndPath(siteEntityId, path);
-        if (page != null){
-            indexRepository.deleteByPageEntity(page);
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    private void deletePage(int siteEntityId, String path, String siteUrl) {
+        Optional<PageEntity> optPage = Optional.ofNullable(pageRepository.findBySiteEntityIdAndPath(siteEntityId, path));
+        if (optPage.isPresent()){
+            PageEntity page = optPage.get();
+            indexRepository.deleteALLByPageEntity(page);
             pageRepository.delete(page);
         }
     }

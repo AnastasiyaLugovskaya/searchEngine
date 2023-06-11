@@ -6,14 +6,13 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.IndexEntity;
 import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
-import searchengine.model.SiteEntity;
 
 import java.util.Set;
 
 @Repository
 public interface IndexRepository extends JpaRepository<IndexEntity, Integer> {
     @Transactional
-    void deleteByPageEntity(PageEntity pageEntity);
+    void deleteALLByPageEntity(PageEntity pageEntity);
     Set<IndexEntity> findAllByLemmaEntityAndPageEntityIn(LemmaEntity lemmaEntity, Set<PageEntity> pageEntities);
     Set<IndexEntity> findAllByLemmaEntityId(int lemmaEntityId);
     Set <IndexEntity> findAllByPageEntityAndLemmaEntityIn(PageEntity pageEntity, Set<LemmaEntity> lemmaEntities);

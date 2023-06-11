@@ -5,9 +5,9 @@ import org.springframework.web.bind.annotation.*;
 import searchengine.dto.indexing.IndexingResponse;
 import searchengine.dto.search.SearchResponse;
 import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.services.IndexingService;
-import searchengine.services.SearchService;
-import searchengine.services.StatisticsService;
+import searchengine.services.indexing.IndexingService;
+import searchengine.services.search.SearchService;
+import searchengine.services.statistics.StatisticsService;
 
 import java.io.IOException;
 

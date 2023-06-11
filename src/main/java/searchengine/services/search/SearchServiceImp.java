@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.services.search;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -15,12 +15,12 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
+import searchengine.services.util.HTMLParser;
+import searchengine.services.indexing.IndexingServiceImp;
+import searchengine.services.lemma.LemmaService;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -76,9 +76,9 @@ public class SearchServiceImp implements SearchService {
     }
     private List<SearchData> getSearchData(SiteEntity siteEntity, Map<String, Integer> lemmas) throws IOException {
         List<LemmaEntity> sortedLemmaList = getSortedLemmaList(siteEntity, lemmas);
-//        if (sortedLemmaList.size() == 0){
-//            throw new NotFoundException("Не обнаружено лемм для поиска");
-//        }
+        if (sortedLemmaList.size() == 0){
+            throw new NotFoundException("Не обнаружено лемм для поиска");
+        }
         Set<PageEntity> pages = getPages(sortedLemmaList);
         if (pages == null || pages.size() == 0) {
             return Collections.emptyList();
@@ -94,7 +94,7 @@ public class SearchServiceImp implements SearchService {
             for (Map.Entry<PageEntity, Double> entry : pageRank.entrySet()) {
                 PageEntity page = entry.getKey();
                 Double rank = entry.getValue();
-                String content = lemmaService.removeTagsFromText(page.getContent());
+                String content = LemmaService.removeTagsFromText(page.getContent());
                 SearchData data = new SearchData(siteEntity.getUrl(), siteEntity.getName(), page.getPath(),
                         htmlParser.getTitle(page.getContent()),
                         snippetCreator.createSnippet(content, lemmas.keySet()),
@@ -133,38 +133,6 @@ public class SearchServiceImp implements SearchService {
     }
 
     @Cacheable("myCache")
-    /*private Set<PageEntity> getPages(List<LemmaEntity> lemmaEntityList) {
-        if (lemmaEntityList.isEmpty()) return Set.of();
-
-        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-        List<CompletableFuture<Set<IndexEntity>>> futures = new ArrayList<>();
-
-        for (LemmaEntity lemmaEntity : lemmaEntityList) {
-            CompletableFuture<Set<IndexEntity>> future = CompletableFuture.supplyAsync(() -> {
-                Set<IndexEntity> set = indexRepository.findAllByLemmaEntity(lemmaEntity);
-                return (set != null) ? set : Collections.emptySet();
-            }, executorService);
-            futures.add(future);
-        }
-
-        CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
-
-        Set<PageEntity> pages = null;
-        try {
-            allFutures.join();
-            pages = futures.stream()
-                    .map(CompletableFuture::join)
-                    .flatMap(Set::stream)
-                    .map(IndexEntity::getPageEntity)
-                    .collect(Collectors.toSet());
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        } finally {
-            executorService.shutdown();
-        }
-
-        return pages;
-    }*/
     private Set<PageEntity> getPages(List<LemmaEntity> lemmaEntityList) {
         if (lemmaEntityList.isEmpty()) return Set.of();
         Set<PageEntity> pages = indexRepository
@@ -213,7 +181,7 @@ public class SearchServiceImp implements SearchService {
         });
         lemmaEntityList.sort(Comparator
                 .comparingInt(LemmaEntity::getFrequency)
-//                .reversed()
+                .reversed()
                 .thenComparing(LemmaEntity::getLemma));
         return lemmaEntityList;
     }

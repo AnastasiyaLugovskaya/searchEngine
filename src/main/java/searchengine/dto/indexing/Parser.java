@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Connection;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import searchengine.config.JsoupConfiguration;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
@@ -12,23 +13,24 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
-import searchengine.services.HTMLParser;
-import searchengine.services.LemmaParser;
+import searchengine.services.util.HTMLParser;
+import searchengine.services.lemma.LemmaParser;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RecursiveAction;
 
-import static searchengine.services.IndexingServiceImp.isIndexingStopped;
+import static searchengine.services.indexing.IndexingServiceImp.isIndexingStopped;
 
 @RequiredArgsConstructor
 
 public class Parser extends RecursiveAction {
     private final int siteId;
-    private final String url;
+    private final String path;
     @Autowired
     private final SiteRepository siteRepository;
     @Autowired
@@ -43,6 +45,7 @@ public class Parser extends RecursiveAction {
     private static final ConcurrentHashMap<Integer, String> lastErrors = new ConcurrentHashMap<>();
 
 
+
     @Override
     protected void compute() {
         if (isIndexingStopped){
@@ -52,28 +55,25 @@ public class Parser extends RecursiveAction {
         Set<String> pageSet;
         try {
             SiteEntity site = siteRepository.findById(siteId);
-            pageSet = htmlParser.getURLs(site.getUrl() + url);
-            for (String path : pageSet) {
-                if (isNotVisited(siteId, path) && isNotFailed(siteId)) {
-                    boolean isSaved = savePage(site, path);
-                    PageEntity pageEntity = pageRepository.findBySiteEntityIdAndPath(siteId, path);
-                    if (pageEntity == null){
-                        continue;
-                    }
+            updateSiteInfo(site, Status.INDEXING, lastErrors.get(siteId));
+            if (isNotVisited(siteId, path) || isNotFailed(siteId)) {
+                Optional<PageEntity> optPage = savePage(site, path);
+                if (optPage.isPresent()) {
+                    PageEntity pageEntity = optPage.get();
                     LemmaParser lemmaParser = new LemmaParser(lemmaRepository, indexRepository);
-                    if (pageEntity.getCode() < 400 ) {
+                    if (HttpStatus.valueOf(pageEntity.getCode()).is2xxSuccessful()) {
                         lemmaParser.parseOnePage(pageEntity);
                     }
-                    updateSiteInfo(site, Status.INDEXING, lastErrors.get(siteId));
-                    if (isSaved) {
+                    pageSet = htmlParser.getURLs(pageEntity.getContent());
+                    for (String path : pageSet) {
                         Parser parser =
                                 new Parser(siteId, path, siteRepository, pageRepository, lemmaRepository, indexRepository,
                                         htmlParser, jsoupConfig);
                         subTask.add(parser);
                     }
+                    invokeAll(subTask);
                 }
             }
-            invokeAll(subTask);
         } catch (Exception e) {
             e.printStackTrace();
             updateSiteInfo(siteRepository.findById(siteId), Status.FAILED, lastErrors.get(siteId));
@@ -98,35 +98,40 @@ public class Parser extends RecursiveAction {
         }
     }
 
-    public boolean savePage(SiteEntity site, String path) throws IOException, InterruptedException {
+    public Optional<PageEntity> savePage(SiteEntity site, String path) throws IOException, InterruptedException {
         if (isIndexingStopped){
-            return false;
+            return Optional.empty();
         }
-        Connection.Response response = htmlParser.getResponse(site.getUrl());
+        Connection.Response response = htmlParser.getResponse(site.getUrl() + path);
         String pageContent = htmlParser.getContent(response);
         int statusCode = htmlParser.getStatusCode(response);
 
         pageRepository.flush();
+        PageEntity page = new PageEntity();
         synchronized (pageRepository) {
-            PageEntity page = pageRepository.findBySiteEntityIdAndPath(siteId, path);
-            try {
-                if (page == null) {
-                    page = new PageEntity();
-                    page.setPath(path);
-                    page.setCode(statusCode);
-                    page.setContent(pageContent);
-                    page.setSiteEntity(site);
-                    pageRepository.save(page);
-                } else if (!page.getContent().equals(pageContent)) {
-                    page.setContent(pageContent);
-                    page.setCode(statusCode);
-                    pageRepository.saveAndUpdate(page);
+            if (isNotVisited(site.getId(), path)) {
+                try {
+                    Optional<PageEntity> optPage = Optional.ofNullable(
+                            pageRepository.findBySiteEntityIdAndPath(siteId, path));
+                    if (optPage.isEmpty()) {
+                        page.setPath(path);
+                        page.setCode(statusCode);
+                        page.setContent(pageContent);
+                        page.setSiteEntity(site);
+                        page = pageRepository.save(page);
+                    } else if (!optPage.get().getContent().equals(pageContent)) {
+                        page.setContent(pageContent);
+                        page.setCode(statusCode);
+                        page = pageRepository.save(page);
+                    }
+                } catch (Exception e) {
+                    String error = "Ошибка сохранения страницы - [" + path + "] -" + System.lineSeparator() + e.getMessage();
+                    lastErrors.put(site.getId(), error);
                 }
-            }catch (Exception e){
-                String error = "Ошибка сохранения страницы - [" + path + "] -" +  System.lineSeparator() + e.getMessage();
-                lastErrors.put(site.getId(), error);
+                return Optional.of(page);
+            } else {
+                return Optional.empty();
             }
         }
-        return true;
     }
 }

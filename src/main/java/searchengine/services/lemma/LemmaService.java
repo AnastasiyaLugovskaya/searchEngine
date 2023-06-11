@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.services.lemma;
 
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
@@ -10,6 +10,7 @@ public class LemmaService {
     private final static String REGEX_TO_SPLIT = "[^а-яё\\s]";
     private final static String REGEX_TO_REMOVE_TAGS = "<[^>]+>|\\p{Punct}|\\{[^}]*}";
     private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
+    private  static final String REGEX_CYRILLIC_ONLY = "[^\\p{IsCyrillic}\\s]+";
     private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ", "ЧАСТ"};
     private static LuceneMorphology luceneMorphology;
 
@@ -52,7 +53,7 @@ public class LemmaService {
         }
         return lemmas;
     }
-    /*public Set<String> getLemmaSet(String text) {
+    public Set<String> getLemmaSet(String text) {
         text = removeTagsFromText(text);
         Set<String> lemmaSet = new HashSet<>();
         if (text == null || text.length() == 0) {
@@ -73,7 +74,7 @@ public class LemmaService {
             }
         }
         return lemmaSet;
-    }*/
+    }
     //ToDO: переделать логику, это для сниппетов используется
     public String getOneLemma(String word){
         String correctWord = word.toLowerCase(Locale.ROOT).replaceAll("[^а-яё\\s]", "").trim();
@@ -103,7 +104,9 @@ public class LemmaService {
         }
         return true;
     }
-    public String removeTagsFromText(String content){
-        return content.replaceAll(REGEX_TO_REMOVE_TAGS, " ").replaceAll("\\s+", " ").trim();
+    public static String removeTagsFromText(String content){
+        return content.replaceAll(REGEX_TO_REMOVE_TAGS, " ")
+                .replaceAll(REGEX_CYRILLIC_ONLY, " ")
+                .replaceAll("\\s+", " ").trim();
     }
 }

@@ -15,12 +15,12 @@ spring:
     show-sql: true
 indexing-settings:
   sites:
-      #- url: https://volochek.life
-        #name: Вышний Волочек
+      - url: https://nopaper.ru
+        name: Электронный документооборот
       - url: https://www.lutherancathedral.ru
         name: КАФЕДРАЛЬНЫЙ СОБОР СВЯТЫХ ПЕТРА И ПАВЛА
-      - url: https://www.svetlovka.ru
-        name: Светловка
+      #- url: https://www.svetlovka.ru
+      #  name: Светловка
 jsoup:
   user-agent: RemSearchBot
   referrer: http://www.google.com
