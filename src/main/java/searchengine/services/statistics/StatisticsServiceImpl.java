@@ -2,6 +2,7 @@ package searchengine.services.statistics;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import searchengine.dto.exceptions.CommonException;
 import searchengine.dto.statistics.DetailedStatisticsItem;
 import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
@@ -25,20 +26,23 @@ public class StatisticsServiceImpl implements StatisticsService {
     @Override
     public StatisticsResponse getStatistics() {
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
-        for (SiteEntity site : siteRepository.findAll()){
-            DetailedStatisticsItem detailedStatisticsItem =
-                    new DetailedStatisticsItem(site.getUrl(), site.getName(), site.getStatus().name(),
-                            site.getStatusTime(), site.getLastError(), pageRepository.countPagesBySiteEntity(site),
-                            lemmaRepository.countLemmasBySiteEntity(site));
-            detailed.add(detailedStatisticsItem);
-        }
-        TotalStatistics total = new TotalStatistics((int) siteRepository.count(), (int) pageRepository.count(),
-                (int) lemmaRepository.count(), siteRepository.countByStatus(Status.INDEXING) > 0);
-        StatisticsData statisticsData = new StatisticsData(total, detailed);
-
         StatisticsResponse response = new StatisticsResponse();
-        response.setStatistics(statisticsData);
-        response.setResult(true);
+        try {
+            for (SiteEntity site : siteRepository.findAll()) {
+                DetailedStatisticsItem detailedStatisticsItem =
+                        new DetailedStatisticsItem(site.getUrl(), site.getName(), site.getStatus().name(),
+                                site.getStatusTime(), site.getLastError(), pageRepository.countPagesBySiteEntity(site),
+                                lemmaRepository.countLemmasBySiteEntity(site));
+                detailed.add(detailedStatisticsItem);
+            }
+            TotalStatistics total = new TotalStatistics((int) siteRepository.count(), (int) pageRepository.count(),
+                    (int) lemmaRepository.count(), siteRepository.countByStatus(Status.INDEXING) > 0);
+            StatisticsData statisticsData = new StatisticsData(total, detailed);
+            response.setStatistics(statisticsData);
+            response.setResult(true);
+        } catch (Exception e){
+            throw new CommonException("Невозможно отобразить статистику, попробуйте повторить запрос позднее");
+        }
         return response;
     }
 }

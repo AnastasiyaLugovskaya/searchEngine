@@ -8,11 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.JsoupConfiguration;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
+import searchengine.dto.exceptions.BadRequestException;
+import searchengine.dto.exceptions.NotFoundException;
 import searchengine.dto.indexing.IndexingResponse;
 import searchengine.dto.indexing.Parser;
-import searchengine.model.PageEntity;
-import searchengine.model.SiteEntity;
-import searchengine.model.Status;
+import searchengine.model.*;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
@@ -20,7 +20,9 @@ import searchengine.repository.SiteRepository;
 import searchengine.services.util.HTMLParser;
 import searchengine.services.lemma.LemmaParser;
 
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 
 @Service
@@ -45,9 +47,7 @@ public class IndexingServiceImp implements IndexingService {
         IndexingResponse response = new IndexingResponse();
         boolean isIndexingStarted = false;
         if (siteRepository.countByStatus(Status.INDEXING) > 0) {
-            response.setResult(false);
-            response.setError("Индексация уже запущена");
-            return response;
+            throw new BadRequestException("Индексация уже запущена");
         }
         cleanDB();
         addSitesToRepo(sites);
@@ -64,8 +64,7 @@ public class IndexingServiceImp implements IndexingService {
     public IndexingResponse stopIndexing() {
         IndexingResponse response = new IndexingResponse();
         if (siteRepository.countByStatus(Status.INDEXING) == 0) {
-            response.setResult(false);
-            response.setError("Индексация не запущена");
+            throw new BadRequestException("Индексация не запущена");
         } else {
             isIndexingStopped = true;
             response.setResult(true);
@@ -86,10 +85,8 @@ public class IndexingServiceImp implements IndexingService {
             }
         }
         if (siteToMatch == null){
-            response.setResult(false);
-            response.setError("Данная страница находится за пределами сайтов, " +
+            throw new NotFoundException("Данная страница находится за пределами сайтов, " +
                     "указанных в конфигурационном файле");
-            return response;
         }
 
         String root = siteToMatch.getUrl();
@@ -148,10 +145,18 @@ public class IndexingServiceImp implements IndexingService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     private void deletePage(int siteEntityId, String path, String siteUrl) {
         Optional<PageEntity> optPage = Optional.ofNullable(pageRepository.findBySiteEntityIdAndPath(siteEntityId, path));
+        Set<LemmaEntity> lemmasToSave = new HashSet<>();
         if (optPage.isPresent()){
             PageEntity page = optPage.get();
+            Set<IndexEntity> indexSet =  indexRepository.findAllByPageEntity(page);
+            indexSet.forEach(indexEntity -> {
+                LemmaEntity lemma = indexEntity.getLemmaEntity();
+                lemma.setFrequency(lemma.getFrequency() - 1);
+                lemmasToSave.add(lemma);
+            });
             indexRepository.deleteALLByPageEntity(page);
             pageRepository.delete(page);
+            lemmaRepository.saveAll(lemmasToSave);
         }
     }
     private void setStatusAfterIndexing(Parser pageParser, SiteEntity siteEntity){

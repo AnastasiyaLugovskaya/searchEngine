@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import searchengine.config.SitesList;
+import searchengine.dto.exceptions.BadRequestException;
 import searchengine.dto.exceptions.NotFoundException;
 import searchengine.dto.search.SearchData;
 import searchengine.dto.search.SearchResponse;
@@ -43,8 +44,9 @@ public class SearchServiceImp implements SearchService {
         SearchResponse response = new SearchResponse();
         lemmaService = LemmaService.getInstance();
         if (query == null || query.length() == 0) {
-            response.setResult(false);
-            response.setError("Задан пустой поисковый запрос");
+//            response.setResult(false);
+//            response.setError("Задан пустой поисковый запрос");
+            throw new BadRequestException("Задан пустой поисковый запрос");
         }
         if (siteRepository.findAll().size() == 0) {
             indexingServiceImp.addSitesToRepo(sites);
@@ -53,9 +55,10 @@ public class SearchServiceImp implements SearchService {
         try {
             Map<String, Integer> lemmas = lemmaService.getLemmas(query);
             if (lemmas.size() == 0) {
-                response.setResult(false);
-                response.setError("Не обнаружено лемм для поиска");
-                return response;
+//                response.setResult(false);
+//                response.setError("Не обнаружено лемм для поиска");
+                throw new BadRequestException("Не обнаружено лемм для поиска");
+//                return response;
             }
             if (site != null && site.length() > 0) {
                 SiteEntity siteEntity = siteRepository.findByUrl(site);
@@ -68,8 +71,7 @@ public class SearchServiceImp implements SearchService {
             response.setResult(true);
             response.setCount(searchData.size());
             response.setData(getSubList(searchData, offset, limit));
-        } catch (
-                IOException e) {
+        } catch (IOException e) {
             throw new NotFoundException("Указанная страница не найдена");
         }
         return response;
@@ -77,13 +79,12 @@ public class SearchServiceImp implements SearchService {
     private List<SearchData> getSearchData(SiteEntity siteEntity, Map<String, Integer> lemmas) throws IOException {
         List<LemmaEntity> sortedLemmaList = getSortedLemmaList(siteEntity, lemmas);
         if (sortedLemmaList.size() == 0){
-            throw new NotFoundException("Не обнаружено лемм для поиска");
+            return Collections.emptyList();
         }
         Set<PageEntity> pages = getPages(sortedLemmaList);
         if (pages == null || pages.size() == 0) {
             return Collections.emptyList();
         }
-
         Double maxRank = getMaxRank(pages, sortedLemmaList);
         List<SearchData> searchData;
         if (maxRank == null) {

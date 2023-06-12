@@ -16,4 +16,5 @@ public interface IndexRepository extends JpaRepository<IndexEntity, Integer> {
     Set<IndexEntity> findAllByLemmaEntityAndPageEntityIn(LemmaEntity lemmaEntity, Set<PageEntity> pageEntities);
     Set<IndexEntity> findAllByLemmaEntityId(int lemmaEntityId);
     Set <IndexEntity> findAllByPageEntityAndLemmaEntityIn(PageEntity pageEntity, Set<LemmaEntity> lemmaEntities);
+    Set<IndexEntity> findAllByPageEntity(PageEntity pageEntity);
 }
