@@ -13,8 +13,10 @@ Search engine realization. Allows:
 ## Instructions for running the app:
 ### Filling application.yaml in:
 * Fill in the section with sites to index:
+
 ![sites.png](img/sites.png)
 * Fill in the fields with credentials for DB connection:
+
 ![db.png](img/db.png)
 ### Building and running the app using Maven:
 ```shell
