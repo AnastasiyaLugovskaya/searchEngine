@@ -4,7 +4,7 @@ server:
 spring:
   datasource:
     username: root
-    password: d188059xs
+    password: password
     url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
   jpa:
     properties:
@@ -19,8 +19,8 @@ indexing-settings:
         name: Электронный документооборот
       - url: https://www.lutherancathedral.ru
         name: КАФЕДРАЛЬНЫЙ СОБОР СВЯТЫХ ПЕТРА И ПАВЛА
-      #- url: https://www.svetlovka.ru
-      #  name: Светловка
+      - url: https://www.svetlovka.ru
+        name: Светловка
 jsoup:
   user-agent: RemSearchBot
   referrer: http://www.google.com
