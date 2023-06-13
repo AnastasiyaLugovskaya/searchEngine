@@ -13,10 +13,9 @@ import java.util.TreeSet;
 @RequiredArgsConstructor
 public class SnippetCreator {
     private static final int MAX_SNIPPET_LENGTH = 210;
-    private LemmaService lemmaService;
 
     public String createSnippet(String content, Set<String> lemmas) throws IOException {
-        lemmaService = LemmaService.getInstance();
+        LemmaService lemmaService = LemmaService.getInstance();
         StringBuilder builder = new StringBuilder();
         String[] words = content.trim().split("\\s+");
         Set<String> foundWords = new TreeSet<>();

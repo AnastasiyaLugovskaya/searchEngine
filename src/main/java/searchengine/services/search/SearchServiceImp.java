@@ -34,18 +34,14 @@ public class SearchServiceImp implements SearchService {
     private final LemmaRepository lemmaRepository;
     private final PageRepository pageRepository;
     private final HTMLParser htmlParser;
-
-    private LemmaService lemmaService;
     private final SnippetCreator snippetCreator;
     private final IndexingServiceImp indexingServiceImp;
 
     @Override
     public SearchResponse search(String query, String site, Integer offset, Integer limit) throws IOException {
         SearchResponse response = new SearchResponse();
-        lemmaService = LemmaService.getInstance();
+        LemmaService lemmaService = LemmaService.getInstance();
         if (query == null || query.length() == 0) {
-//            response.setResult(false);
-//            response.setError("Задан пустой поисковый запрос");
             throw new BadRequestException("Задан пустой поисковый запрос");
         }
         if (siteRepository.findAll().size() == 0) {
@@ -55,10 +51,7 @@ public class SearchServiceImp implements SearchService {
         try {
             Map<String, Integer> lemmas = lemmaService.getLemmas(query);
             if (lemmas.size() == 0) {
-//                response.setResult(false);
-//                response.setError("Не обнаружено лемм для поиска");
                 throw new BadRequestException("Не обнаружено лемм для поиска");
-//                return response;
             }
             if (site != null && site.length() > 0) {
                 SiteEntity siteEntity = siteRepository.findByUrl(site);
@@ -106,14 +99,12 @@ public class SearchServiceImp implements SearchService {
         }
         return searchData;
     }
-
     private Double sumRank(PageEntity page, Set<LemmaEntity> lemmaEntitySet) {
         return indexRepository
                 .findAllByPageEntityAndLemmaEntityIn(page, lemmaEntitySet)
                 .stream().mapToDouble(IndexEntity::getRank)
                 .sum();
     }
-
     private Double getMaxRank(Set<PageEntity> pages, List<LemmaEntity> lemmaEntityList) {
         Map<PageEntity, Double> pageRank = getPageRank(pages, lemmaEntityList);
         Double maxRank = null;
@@ -124,7 +115,6 @@ public class SearchServiceImp implements SearchService {
         }
         return maxRank;
     }
-
     private Map<PageEntity, Double> getPageRank(Set<PageEntity> pages, List<LemmaEntity> lemmaEntityList) {
         Set<LemmaEntity> lemmaEntitySet = new HashSet<>(lemmaEntityList);
         Map<PageEntity, Double> pageRank = new HashMap<>();
@@ -132,7 +122,6 @@ public class SearchServiceImp implements SearchService {
                 Collectors.toMap(Function.identity(), page -> sumRank(page, lemmaEntitySet))));
         return pageRank;
     }
-
     @Cacheable("myCache")
     private Set<PageEntity> getPages(List<LemmaEntity> lemmaEntityList) {
         if (lemmaEntityList.isEmpty()) return Set.of();
@@ -158,7 +147,6 @@ public class SearchServiceImp implements SearchService {
         }
         return pages;
     }
-
     private List<SearchData> getSubList(List<SearchData> searchData, Integer offset, Integer limit) {
         int fromIndex = offset;
         int toIndex = fromIndex + limit;
@@ -172,7 +160,7 @@ public class SearchServiceImp implements SearchService {
         return searchData.subList(fromIndex, toIndex);
     }
     private List<LemmaEntity> getSortedLemmaList(SiteEntity siteEntity, Map<String, Integer> lemmas){
-        double threshold = pageRepository.count() / 3.0;
+        double threshold = pageRepository.count() * 0.75;
         List<LemmaEntity> lemmaEntityList = new ArrayList<>();
         lemmas.keySet().forEach(lemma -> {
             LemmaEntity lemmaEntity = lemmaRepository.findByLemmaAndSiteEntityId(lemma, siteEntity.getId());

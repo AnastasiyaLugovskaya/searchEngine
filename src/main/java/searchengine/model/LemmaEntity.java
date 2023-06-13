@@ -24,6 +24,5 @@ public class LemmaEntity {
     @Column(nullable = false)
     private int frequency;
     public LemmaEntity(){
-
     }
 }

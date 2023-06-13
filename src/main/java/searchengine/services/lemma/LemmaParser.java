@@ -1,6 +1,7 @@
 package searchengine.services.lemma;
 
 import org.springframework.transaction.annotation.Transactional;
+import searchengine.dto.exceptions.CommonException;
 import searchengine.model.IndexEntity;
 import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
@@ -18,7 +19,6 @@ public class LemmaParser {
         this.lemmaRepository = lemmaRepository;
         this.indexRepository = indexRepository;
     }
-
     @Transactional
     public void parseOnePage(PageEntity pageEntity) {
         try {
@@ -49,8 +49,8 @@ public class LemmaParser {
                 }
             }
             indexRepository.saveAll(indexEntitySet);
-        } catch (RuntimeException | IOException e) {
-            throw new RuntimeException("Ошибка при парсинге страницы");
+        } catch (Exception e) {
+            throw new CommonException("Ошибка при парсинге страницы");
         }
     }
     private IndexEntity getIndexForLemma(LemmaEntity lemma, PageEntity pageEntity, Map<String, Integer> lemmasFromPage){

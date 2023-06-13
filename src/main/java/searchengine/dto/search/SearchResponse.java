@@ -12,7 +12,4 @@ public class SearchResponse {
     private List<SearchData> data = new ArrayList<>();
     private String error;
 
-    public void dataAdd(SearchData searchData){
-        data.add(searchData);
-    }
 }

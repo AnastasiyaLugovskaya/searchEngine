@@ -1,4 +1,4 @@
-package searchengine.dto.indexing;
+package searchengine.services.indexing;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -97,7 +97,6 @@ public class Parser extends RecursiveAction {
             siteRepository.save(site);
         }
     }
-
     public Optional<PageEntity> savePage(SiteEntity site, String path) throws IOException, InterruptedException {
         if (isIndexingStopped){
             return Optional.empty();

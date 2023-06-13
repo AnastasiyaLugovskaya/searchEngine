@@ -75,7 +75,6 @@ public class LemmaService {
         }
         return lemmaSet;
     }
-    //ToDO: переделать логику, это для сниппетов используется
     public String getOneLemma(String word){
         String correctWord = word.toLowerCase(Locale.ROOT).replaceAll("[^а-яё\\s]", "").trim();
         if (correctWord.length() > 0) {

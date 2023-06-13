@@ -19,7 +19,7 @@ public class HTMLParser {
     private final JsoupConfiguration jsoupConfig;
     private static final Random random = new Random();
 
-    public Set<String> getURLs(String content) throws InterruptedException, IOException {
+    public Set<String> getURLs(String content) throws InterruptedException {
         Set<String> urlSet = new TreeSet<>();
         Thread.sleep(500);
         Document doc = Jsoup.parse(content);
@@ -32,8 +32,7 @@ public class HTMLParser {
             }
         });
         return urlSet;
-}
-
+    }
     public Connection.Response getResponse(String url) throws InterruptedException, IOException {
         Thread.sleep(jsoupConfig.getTimeoutMin() + Math.abs(random.nextInt()) %
                 jsoupConfig.getTimeoutMax() - jsoupConfig.getTimeoutMin());
@@ -45,15 +44,12 @@ public class HTMLParser {
                 .followRedirects(false)
                 .execute();
     }
-
-    public String getContent(Connection.Response response) throws IOException {
+    public String getContent(Connection.Response response){
         return response.body();
     }
-
-    public int getStatusCode(Connection.Response response) throws IOException {
+    public int getStatusCode(Connection.Response response){
         return response.statusCode();
     }
-
     public String getTitle(String content) {
         Document document = Jsoup.parse(content);
         return document.title();

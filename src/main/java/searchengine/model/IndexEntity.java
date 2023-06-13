@@ -23,6 +23,5 @@ public class IndexEntity {
     private float rank;
 
     public IndexEntity(){
-
     }
 }

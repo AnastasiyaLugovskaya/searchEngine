@@ -8,7 +8,6 @@ import org.hibernate.annotations.OnDeleteAction;
 import javax.persistence.*;
 
 @Entity(name = "page")
-//@Table(name = "page", indexes = {@Index(columnList = "path", name = "path_index")})
 @Setter
 @Getter
 public class PageEntity {

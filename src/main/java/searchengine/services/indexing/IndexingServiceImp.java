@@ -11,7 +11,6 @@ import searchengine.config.SitesList;
 import searchengine.dto.exceptions.BadRequestException;
 import searchengine.dto.exceptions.NotFoundException;
 import searchengine.dto.indexing.IndexingResponse;
-import searchengine.dto.indexing.Parser;
 import searchengine.model.*;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
