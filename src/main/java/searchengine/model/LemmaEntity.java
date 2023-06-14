@@ -15,7 +15,7 @@ public class LemmaEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    @ManyToOne (optional=false, fetch = FetchType.LAZY)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "site_id", nullable = false)
     private SiteEntity siteEntity;
@@ -23,6 +23,7 @@ public class LemmaEntity {
     private String lemma;
     @Column(nullable = false)
     private int frequency;
-    public LemmaEntity(){
+
+    public LemmaEntity() {
     }
 }

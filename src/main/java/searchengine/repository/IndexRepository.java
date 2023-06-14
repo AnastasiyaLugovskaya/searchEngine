@@ -13,8 +13,12 @@ import java.util.Set;
 public interface IndexRepository extends JpaRepository<IndexEntity, Integer> {
     @Transactional
     void deleteALLByPageEntity(PageEntity pageEntity);
+
     Set<IndexEntity> findAllByLemmaEntityAndPageEntityIn(LemmaEntity lemmaEntity, Set<PageEntity> pageEntities);
+
     Set<IndexEntity> findAllByLemmaEntityId(int lemmaEntityId);
-    Set <IndexEntity> findAllByPageEntityAndLemmaEntityIn(PageEntity pageEntity, Set<LemmaEntity> lemmaEntities);
+
+    Set<IndexEntity> findAllByPageEntityAndLemmaEntityIn(PageEntity pageEntity, Set<LemmaEntity> lemmaEntities);
+
     Set<IndexEntity> findAllByPageEntity(PageEntity pageEntity);
 }

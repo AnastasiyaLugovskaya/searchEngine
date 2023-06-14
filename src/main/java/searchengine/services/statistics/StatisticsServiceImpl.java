@@ -23,6 +23,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
+
     @Override
     public StatisticsResponse getStatistics() {
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
@@ -40,7 +41,7 @@ public class StatisticsServiceImpl implements StatisticsService {
             StatisticsData statisticsData = new StatisticsData(total, detailed);
             response.setStatistics(statisticsData);
             response.setResult(true);
-        } catch (Exception e){
+        } catch (Exception e) {
             throw new CommonException("Невозможно отобразить статистику, попробуйте повторить запрос позднее");
         }
         return response;

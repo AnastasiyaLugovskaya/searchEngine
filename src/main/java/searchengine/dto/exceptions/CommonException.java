@@ -5,6 +5,6 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Getter
-public class CommonException extends RuntimeException{
+public class CommonException extends RuntimeException {
     private final String error;
 }

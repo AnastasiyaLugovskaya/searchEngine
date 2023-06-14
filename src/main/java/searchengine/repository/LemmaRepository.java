@@ -8,5 +8,6 @@ import searchengine.model.SiteEntity;
 @Repository
 public interface LemmaRepository extends JpaRepository<LemmaEntity, Integer> {
     LemmaEntity findByLemmaAndSiteEntityId(String lemma, int siteEntityId);
+
     int countLemmasBySiteEntity(SiteEntity siteEntity);
 }

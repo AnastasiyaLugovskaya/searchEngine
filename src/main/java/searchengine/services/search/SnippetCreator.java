@@ -25,7 +25,7 @@ public class SnippetCreator {
             if (word.length() == 0 || lemmaWord == null) {
                 continue;
             }
-            if (lemmas.contains(lemmaWord)){
+            if (lemmas.contains(lemmaWord)) {
                 foundWords.add(word.replaceAll("[^a-zA-Zа-яА-ЯёЁ]", ""));
                 int start = Math.max(i - 5, 0);
                 int end = Math.min(i + 5, words.length);
@@ -48,7 +48,7 @@ public class SnippetCreator {
             }
         }
         String snippet = builder.toString();
-        if (snippet.length() > 0){
+        if (snippet.length() > 0) {
             for (String word : foundWords) {
                 snippet = snippet.replaceAll(word, "<b>" + word + "</b>");
             }

@@ -8,17 +8,20 @@ import searchengine.model.PageEntity;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 
-import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class LemmaParser {
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
 
-    public LemmaParser(LemmaRepository lemmaRepository, IndexRepository indexRepository) throws IOException {
+    public LemmaParser(LemmaRepository lemmaRepository, IndexRepository indexRepository) {
         this.lemmaRepository = lemmaRepository;
         this.indexRepository = indexRepository;
     }
+
     @Transactional
     public void parseOnePage(PageEntity pageEntity) {
         try {
@@ -53,7 +56,8 @@ public class LemmaParser {
             throw new CommonException("Ошибка при парсинге страницы");
         }
     }
-    private IndexEntity getIndexForLemma(LemmaEntity lemma, PageEntity pageEntity, Map<String, Integer> lemmasFromPage){
+
+    private IndexEntity getIndexForLemma(LemmaEntity lemma, PageEntity pageEntity, Map<String, Integer> lemmasFromPage) {
         IndexEntity indexEntity = new IndexEntity();
         indexEntity.setLemmaEntity(lemma);
         indexEntity.setPageEntity(pageEntity);

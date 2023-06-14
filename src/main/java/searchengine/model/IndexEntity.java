@@ -22,6 +22,6 @@ public class IndexEntity {
     @Column(name = "`rank`", nullable = false)
     private float rank;
 
-    public IndexEntity(){
+    public IndexEntity() {
     }
 }

@@ -30,26 +30,30 @@ public class ApiController {
     public StatisticsResponse statistics() {
         return statisticsService.getStatistics();
     }
+
     @GetMapping("/startIndexing")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public IndexingResponse startIndexing(){
+    @ResponseStatus(HttpStatus.OK)
+    public IndexingResponse startIndexing() {
         return indexingService.startIndexing();
     }
+
     @GetMapping("/stopIndexing")
     @ResponseStatus(HttpStatus.OK)
-    public IndexingResponse stopIndexing(){
+    public IndexingResponse stopIndexing() {
         return indexingService.stopIndexing();
     }
+
     @PostMapping("/indexPage")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public IndexingResponse indexPage(@RequestParam(name="url") String url) throws Exception {
+    @ResponseStatus(HttpStatus.OK)
+    public IndexingResponse indexPage(@RequestParam(name = "url") String url) throws Exception {
         return indexingService.indexPage(url);
     }
+
     @GetMapping("/search")
     @ResponseStatus(HttpStatus.OK)
     public SearchResponse search(@RequestParam String query,
                                  @RequestParam(required = false) String site,
-                                 @RequestParam (defaultValue = "0") int offset,
+                                 @RequestParam(defaultValue = "0") int offset,
                                  @RequestParam(defaultValue = "20") int limit) throws IOException {
         return searchService.search(query, site, offset, limit);
     }

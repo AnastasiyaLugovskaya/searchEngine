@@ -10,17 +10,19 @@ public class LemmaService {
     private final static String REGEX_TO_SPLIT = "[^а-яё\\s]";
     private final static String REGEX_TO_REMOVE_TAGS = "<[^>]+>|\\p{Punct}|\\{[^}]*}";
     private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
-    private  static final String REGEX_CYRILLIC_ONLY = "[^\\p{IsCyrillic}\\s]+";
+    private static final String REGEX_CYRILLIC_ONLY = "[^\\p{IsCyrillic}\\s]+";
     private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ", "ЧАСТ"};
     private static LuceneMorphology luceneMorphology;
 
     public LemmaService(LuceneMorphology morphology) {
         luceneMorphology = morphology;
     }
+
     public static LemmaService getInstance() throws IOException {
-        LuceneMorphology morphology= new RussianLuceneMorphology();
+        LuceneMorphology morphology = new RussianLuceneMorphology();
         return new LemmaService(morphology);
     }
+
     public Map<String, Integer> getLemmas(String text) throws IOException {
         Map<String, Integer> lemmas = new HashMap<>();
         text = removeTagsFromText(text);
@@ -31,8 +33,8 @@ public class LemmaService {
                 .replaceAll(REGEX_TO_SPLIT, " ")
                 .trim()
                 .split("\\s+");
-        for (String word : words){
-            if (word.isBlank()){
+        for (String word : words) {
+            if (word.isBlank()) {
                 continue;
             }
             word = word.trim();
@@ -53,6 +55,7 @@ public class LemmaService {
         }
         return lemmas;
     }
+
     public Set<String> getLemmaSet(String text) {
         text = removeTagsFromText(text);
         Set<String> lemmaSet = new HashSet<>();
@@ -75,7 +78,8 @@ public class LemmaService {
         }
         return lemmaSet;
     }
-    public String getOneLemma(String word){
+
+    public String getOneLemma(String word) {
         String correctWord = word.toLowerCase(Locale.ROOT).replaceAll("[^а-яё\\s]", "").trim();
         if (correctWord.length() > 0) {
             return luceneMorphology.getNormalForms(correctWord).get(0);
@@ -83,9 +87,11 @@ public class LemmaService {
             return null;
         }
     }
+
     private boolean anyWordBaseBelongToParticle(List<String> wordBaseForms) {
         return wordBaseForms.stream().anyMatch(this::hasParticleProperty);
     }
+
     private boolean hasParticleProperty(String wordBase) {
         for (String property : PARTICLES_NAMES) {
             if (wordBase.toUpperCase().contains(property)) {
@@ -94,6 +100,7 @@ public class LemmaService {
         }
         return false;
     }
+
     private boolean isCorrectWordForm(String word) {
         List<String> wordInfo = luceneMorphology.getMorphInfo(word);
         for (String morphInfo : wordInfo) {
@@ -103,7 +110,8 @@ public class LemmaService {
         }
         return true;
     }
-    public static String removeTagsFromText(String content){
+
+    public static String removeTagsFromText(String content) {
         return content.replaceAll(REGEX_TO_REMOVE_TAGS, " ")
                 .replaceAll(REGEX_CYRILLIC_ONLY, " ")
                 .replaceAll("\\s+", " ").trim();

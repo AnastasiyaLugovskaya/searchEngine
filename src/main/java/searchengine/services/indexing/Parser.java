@@ -13,7 +13,7 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
-import searchengine.services.util.HTMLParser;
+import searchengine.util.HTMLParser;
 import searchengine.services.lemma.LemmaParser;
 
 import java.io.IOException;
@@ -45,10 +45,9 @@ public class Parser extends RecursiveAction {
     private static final ConcurrentHashMap<Integer, String> lastErrors = new ConcurrentHashMap<>();
 
 
-
     @Override
     protected void compute() {
-        if (isIndexingStopped){
+        if (isIndexingStopped) {
             return;
         }
         List<Parser> subTask = new ArrayList<>();
@@ -79,6 +78,7 @@ public class Parser extends RecursiveAction {
             updateSiteInfo(siteRepository.findById(siteId), Status.FAILED, lastErrors.get(siteId));
         }
     }
+
     private boolean isNotVisited(int siteId, String path) {
         return !pageRepository.existsBySiteEntityIdAndPath(siteId, path);
     }
@@ -87,7 +87,7 @@ public class Parser extends RecursiveAction {
         return !siteRepository.existsByIdAndStatus(siteId, Status.FAILED);
     }
 
-    public void updateSiteInfo(SiteEntity site, Status status, String lastError){
+    public void updateSiteInfo(SiteEntity site, Status status, String lastError) {
         site.setStatusTime(System.currentTimeMillis());
         site.setStatus(status);
         if (lastError == null || lastError.length() == 0) {
@@ -97,8 +97,9 @@ public class Parser extends RecursiveAction {
             siteRepository.save(site);
         }
     }
+
     public Optional<PageEntity> savePage(SiteEntity site, String path) throws IOException, InterruptedException {
-        if (isIndexingStopped){
+        if (isIndexingStopped) {
             return Optional.empty();
         }
         Connection.Response response = htmlParser.getResponse(site.getUrl() + path);

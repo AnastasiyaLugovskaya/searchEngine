@@ -16,7 +16,10 @@ import java.util.Optional;
 @Component
 public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
     boolean existsByIdAndStatus(int siteId, Status status);
+
     int countByStatus(Status status);
+
     SiteEntity findByUrl(String url);
+
     SiteEntity findById(int siteId);
-    }
+}

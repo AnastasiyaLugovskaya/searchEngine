@@ -16,7 +16,7 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
-import searchengine.services.util.HTMLParser;
+import searchengine.util.HTMLParser;
 import searchengine.services.lemma.LemmaParser;
 
 import java.util.HashSet;
@@ -78,12 +78,12 @@ public class IndexingServiceImp implements IndexingService {
         LemmaParser lemmaParser = new LemmaParser(lemmaRepository, indexRepository);
         url = url.toLowerCase();
         Site siteToMatch = null;
-        for (Site site : sites.getSites()){
-            if (url.contains(site.getUrl())){
+        for (Site site : sites.getSites()) {
+            if (url.contains(site.getUrl())) {
                 siteToMatch = site;
             }
         }
-        if (siteToMatch == null){
+        if (siteToMatch == null) {
             throw new NotFoundException("Данная страница находится за пределами сайтов, " +
                     "указанных в конфигурационном файле");
         }
@@ -92,13 +92,13 @@ public class IndexingServiceImp implements IndexingService {
         String relativeUrl = (url.equals(root)) ? "/" : url.replace(root, "");
         SiteEntity siteEntity = siteRepository.findByUrl(root);
 
-        if (siteEntity == null){
+        if (siteEntity == null) {
             addOneSiteToRepo(siteToMatch);
             siteEntity = siteRepository.findByUrl(root);
         }
         deletePage(siteEntity.getId(), relativeUrl, root);
 
-        Parser parser = new Parser(siteEntity.getId(), relativeUrl,siteRepository,pageRepository,
+        Parser parser = new Parser(siteEntity.getId(), relativeUrl, siteRepository, pageRepository,
                 lemmaRepository, indexRepository, htmlParser, jsoupConfig);
         Optional<PageEntity> optionalPage = parser.savePage(siteEntity, relativeUrl);
         if (optionalPage.isPresent()) {
@@ -110,29 +110,33 @@ public class IndexingServiceImp implements IndexingService {
         response.setError("");
         return response;
     }
-    public void cleanDB(){
+
+    public void cleanDB() {
         indexRepository.deleteAllInBatch();
         lemmaRepository.deleteAllInBatch();
         pageRepository.deleteAllInBatch();
         siteRepository.deleteAllInBatch();
     }
+
     private void indexOneSite(SiteEntity siteEntity, String url, SiteRepository siteRepository, PageRepository pageRepository,
-                                HTMLParser htmlParser, JsoupConfiguration jsoupConfig) {
+                              HTMLParser htmlParser, JsoupConfiguration jsoupConfig) {
         new Thread(() -> {
             Parser pageParser = new Parser(
-                            siteEntity.getId(), url, siteRepository, pageRepository, lemmaRepository,
-                            indexRepository, htmlParser, jsoupConfig);
-                    ForkJoinPool forkJoinPool = new ForkJoinPool();
-                    forkJoinPool.invoke(pageParser);
-                    setStatusAfterIndexing(pageParser, siteEntity);
-                }).start();
+                    siteEntity.getId(), url, siteRepository, pageRepository, lemmaRepository,
+                    indexRepository, htmlParser, jsoupConfig);
+            ForkJoinPool forkJoinPool = new ForkJoinPool();
+            forkJoinPool.invoke(pageParser);
+            setStatusAfterIndexing(pageParser, siteEntity);
+        }).start();
     }
-    public void addSitesToRepo(SitesList sites){
+
+    public void addSitesToRepo(SitesList sites) {
         for (Site s : sites.getSites()) {
             addOneSiteToRepo(s);
         }
     }
-    public void addOneSiteToRepo(Site s){
+
+    public void addOneSiteToRepo(Site s) {
         SiteEntity entity = new SiteEntity();
         entity.setName(s.getName());
         entity.setUrl(s.getUrl().toLowerCase());
@@ -141,13 +145,14 @@ public class IndexingServiceImp implements IndexingService {
 
         siteRepository.save(entity);
     }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     private void deletePage(int siteEntityId, String path, String siteUrl) {
         Optional<PageEntity> optPage = Optional.ofNullable(pageRepository.findBySiteEntityIdAndPath(siteEntityId, path));
         Set<LemmaEntity> lemmasToSave = new HashSet<>();
-        if (optPage.isPresent()){
+        if (optPage.isPresent()) {
             PageEntity page = optPage.get();
-            Set<IndexEntity> indexSet =  indexRepository.findAllByPageEntity(page);
+            Set<IndexEntity> indexSet = indexRepository.findAllByPageEntity(page);
             indexSet.forEach(indexEntity -> {
                 LemmaEntity lemma = indexEntity.getLemmaEntity();
                 lemma.setFrequency(lemma.getFrequency() - 1);
@@ -158,7 +163,8 @@ public class IndexingServiceImp implements IndexingService {
             lemmaRepository.saveAll(lemmasToSave);
         }
     }
-    private void setStatusAfterIndexing(Parser pageParser, SiteEntity siteEntity){
+
+    private void setStatusAfterIndexing(Parser pageParser, SiteEntity siteEntity) {
         if (isIndexingStopped) {
             pageParser.cancel(true);
             pageParser.updateSiteInfo(siteEntity, Status.FAILED, "Индексация остановлена пользователем");
